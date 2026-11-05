@@ -1,58 +1,219 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+#  FarmaControl
+### Sistema Web Integrado de Gestión Farmacéutica
 
-## About Laravel
+**Proyecto Integrado | Analista Programador | INACAP 2026**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Descripción del proyecto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**FarmaControl** es un sistema web desarrollado como parte de la asignatura Proyecto Integrado de INACAP.
 
-## Learning Laravel
+Su objetivo es facilitar la gestión de información farmacéutica mediante una plataforma que permita administrar medicamentos, controlar inventarios y apoyar los procesos relacionados con el funcionamiento de una farmacia.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+El sistema está diseñado considerando dos contextos:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Farmacia privada:** gestión comercial y administración de medicamentos.
+- **Farmacia asistencial (CESFAM):** gestión de medicamentos y apoyo a procesos asistenciales.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Además, FarmaControl contempla su utilización como herramienta de simulación académica para estudiantes del área de Química y Farmacia de INACAP.
 
-## Agentic Development
+El proyecto surge a partir del levantamiento de necesidades realizado con un docente del área farmacéutica, quien participó como representante del cliente académico.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+> **Aviso:** FarmaControl es un software de simulación desarrollado exclusivamente con fines educativos. No está autorizado para operaciones farmacéuticas reales.
+
+---
+
+## Objetivo del sistema
+
+Desarrollar una plataforma web que permita centralizar y organizar información farmacéutica, facilitando el registro de medicamentos y la implementación progresiva de funcionalidades relacionadas con inventario, lotes, vencimientos y control de acceso.
+
+Se busca construir una aplicación funcional, intuitiva y adecuada para representar procesos farmacéuticos en un entorno académico.
+
+---
+
+## Tecnologías utilizadas
+
+| Tecnología | Función |
+|---|---|
+| Laravel 11 | Desarrollo del backend |
+| PHP | Lógica del servidor |
+| Vue.js | Interfaz de usuario |
+| Inertia.js | Integración entre Laravel y Vue |
+| Tailwind CSS | Diseño visual |
+| MySQL | Almacenamiento de información |
+| Docker y Laravel Sail | Entorno de desarrollo |
+| WSL2 | Entorno Linux |
+| Git y GitHub | Control de versiones |
+| Visual Studio Code | Desarrollo del código |
+
+La aplicación utiliza Laravel para procesar las solicitudes, Vue.js para presentar las interfaces e Inertia.js para comunicar ambos componentes.
+
+MySQL permite almacenar los datos de forma persistente.
+
+---
+
+##  Avances implementados
+
+Actualmente, FarmaControl cuenta con las siguientes funcionalidades:
+
+### 1. Configuración del proyecto
+- Instalación y configuración de Laravel.
+- Configuración de Docker y Laravel Sail.
+- Integración de Vue.js e Inertia.js.
+- Conexión funcional con MySQL.
+- Configuración del repositorio en GitHub.
+
+### 2. Autenticación
+- Formulario de inicio de sesión.
+- Validación de credenciales.
+- Protección de rutas para usuarios autenticados.
+- Cierre de sesión.
+- Acceso al panel principal.
+
+### 3. Gestión de medicamentos
+Se desarrolló un módulo que permite:
+
+- Registrar nuevos medicamentos.
+- Consultar medicamentos almacenados.
+- Editar información existente.
+- Activar y desactivar medicamentos sin eliminarlos.
+- Validar campos obligatorios y códigos únicos.
+- Guardar los cambios en MySQL.
+
+Cada medicamento contiene información como nombre, principio activo, concentración, forma farmacéutica, presentación y código.
+
+### 4. Interfaz del sistema
+- Página de inicio.
+- Panel principal.
+- Catálogo de medicamentos.
+- Formularios de registro y edición.
+- Mensajes de confirmación.
+- Marca de agua que identifica el uso académico.
+
+### 5. Base de datos
+Se han configurado las tablas iniciales para usuarios, roles y medicamentos.
+
+Las operaciones del catálogo se realizan mediante Laravel y Eloquent, utilizando MySQL como base de datos.
+
+---
+
+## Funcionalidades en desarrollo
+
+| Funcionalidad | Estado |
+|---|---|
+| Configuración del entorno |  Implementado |
+| Conexión a MySQL |  Implementado |
+| Inicio y cierre de sesión |  Implementado |
+| Panel principal |  Versión inicial |
+| Registro de medicamentos |  Implementado |
+| Consulta y edición de medicamentos |  Implementado |
+| Activación y desactivación |  Implementado |
+| Permisos según roles |  En desarrollo |
+| Gestión de inventario |  Pendiente |
+| Gestión de lotes y vencimientos |  Pendiente |
+| Alertas de stock y vencimiento |  Pendiente |
+| Pruebas integrales |  Pendiente |
+| Despliegue en AWS |  Pendiente |
+
+Los avances corresponden a funcionalidades desarrolladas en el entorno local. El sistema continúa en proceso de implementación y pruebas.
+
+---
+
+##  Roles del sistema
+
+FarmaControl contempla diferentes perfiles de usuario, de acuerdo con las responsabilidades definidas para el proyecto.
+
+Entre ellos se encuentran:
+
+- Docente.
+- Estudiante.
+- Químico Farmacéutico.
+- Técnico en Farmacia.
+
+Los roles ya se encuentran registrados en la base de datos.
+
+Actualmente se trabaja en implementar los permisos correspondientes para restringir las operaciones según el perfil del usuario.
+
+---
+
+##  Pruebas realizadas
+
+Durante el desarrollo se han realizado verificaciones para comprobar el funcionamiento de los componentes implementados.
+
+Entre las pruebas realizadas se encuentran:
+
+- Ejecución del proyecto mediante Docker.
+- Verificación de conexión con MySQL.
+- Comprobación de rutas de Laravel.
+- Registro de medicamentos.
+- Edición de información almacenada.
+- Consulta de registros mediante Laravel Tinker.
+- Pruebas de las operaciones de activación y desactivación.
+
+Estas verificaciones permiten comprobar el funcionamiento inicial de los módulos, aunque todavía se requieren pruebas integrales.
+
+---
+
+##  Acceso al sistema
+
+### Dirección local
+
+**http://localhost:8080**
+
+Esta es la dirección utilizada actualmente para ejecutar FarmaControl en el entorno de desarrollo.
+
+**Importante para la revisión docente:** esta dirección funciona únicamente cuando el proyecto está ejecutándose en el equipo desde el que se accede. No corresponde todavía a un enlace público.
+
+### Ejecución local
+
+Con Docker Desktop iniciado y el proyecto configurado, ejecutar desde la carpeta principal:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+docker compose up -d
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Para compilar el frontend:
 
-## Contributing
+```bash
+docker compose exec laravel.test npm run build
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Posteriormente, abrir en el navegador:
 
-## Code of Conduct
+```text
+http://localhost:8080
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Para una instalación nueva también es necesario configurar las dependencias, las variables de entorno y la base de datos.
 
-## Security Vulnerabilities
+El despliegue público en AWS está contemplado para una etapa posterior del proyecto.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+##  Seguimiento del desarrollo
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Este repositorio permite revisar el código fuente y los avances realizados durante la construcción de FarmaControl.
+
+A través del historial de **commits de GitHub** es posible identificar las modificaciones incorporadas al proyecto.
+
+El archivo README se actualizará progresivamente para reflejar las funcionalidades implementadas y las actividades pendientes.
+
+---
+
+##  Contexto académico
+
+**Institución:** INACAP  
+**Carrera:** Analista Programador  
+**Asignatura:** Proyecto Integrado  
+**Año:** 2026  
+**Proyecto:** FarmaControl
+
+El desarrollo se basa en los requerimientos levantados y documentados para el Sistema Web Integrado de Gestión para Farmacia Privada y Asistencial (CESFAM).
+
+---
+
+**FarmaControl | Proyecto Integrado INACAP 2026**
+
+*Software de simulación académica. Sin validez legal para operaciones farmacéuticas reales.*
