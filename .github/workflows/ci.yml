@@ -1,0 +1,57 @@
+name: FarmaControl - Integracion Continua
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    name: Verificar Laravel y Vue
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, sqlite, pdo_sqlite, xml, bcmath
+          coverage: none
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias de Laravel
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Preparar entorno de pruebas
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+
+      - name: Ejecutar pruebas de Laravel
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test
+
+      - name: Instalar dependencias de Vue
+        run: npm ci
+
+      - name: Compilar frontend
+        run: npm run build
