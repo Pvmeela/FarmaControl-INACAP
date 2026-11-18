@@ -1,10 +1,11 @@
-
 <?php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use App\Http\Middleware\VerificarRol;
+use App\Http\Middleware\HandleInertiaRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,13 +14,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
+        // Mantener el funcionamiento de Inertia.js
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
+
+        // Registrar middleware para verificar roles
+        $middleware->alias([
+            'rol' => VerificarRol::class,
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) =>
+                $request->is('api/*') ||
+                $request->expectsJson(),
         );
+
     })
     ->create();

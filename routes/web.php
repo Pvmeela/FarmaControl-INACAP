@@ -1,10 +1,16 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MedicamentoController;
+use App\Http\Controllers\LoteController;
+use App\Http\Controllers\MovimientoInventarioController;
+use App\Http\Controllers\VentaController;
+use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\RecetaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,13 +55,14 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Panel principal
+    | Dashboard y alertas de inventario
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [
+        DashboardController::class,
+        'index'
+    ])->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -63,29 +70,105 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    // Consultar medicamentos registrados
     Route::get('/medicamentos', [
         MedicamentoController::class,
         'index'
     ])->name('medicamentos.index');
 
-    // Registrar nuevos medicamentos
     Route::post('/medicamentos', [
         MedicamentoController::class,
         'store'
     ])->name('medicamentos.store');
 
-    // Actualizar medicamentos existentes
     Route::put('/medicamentos/{medicamento}', [
         MedicamentoController::class,
         'update'
     ])->name('medicamentos.update');
 
-    // Activar o desactivar medicamentos
     Route::patch('/medicamentos/{medicamento}/estado', [
         MedicamentoController::class,
         'cambiarEstado'
     ])->name('medicamentos.estado');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gestión de lotes - RF-07 y RF-08
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/lotes', [
+        LoteController::class,
+        'index'
+    ])->name('lotes.index');
+
+    Route::post('/lotes', [
+        LoteController::class,
+        'store'
+    ])->name('lotes.store');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Movimientos de inventario y FEFO
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/movimientos', [
+        MovimientoInventarioController::class,
+        'index'
+    ])->name('movimientos.index');
+
+    Route::post('/movimientos', [
+        MovimientoInventarioController::class,
+        'store'
+    ])->name('movimientos.store');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ventas simuladas - RF-10
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/ventas', [
+        VentaController::class,
+        'index'
+    ])->name('ventas.index');
+
+    Route::post('/ventas', [
+        VentaController::class,
+        'store'
+    ])->name('ventas.store');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pacientes simulados - RF-15
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/pacientes', [
+        PacienteController::class,
+        'index'
+    ])->name('pacientes.index');
+
+    Route::post('/pacientes', [
+        PacienteController::class,
+        'store'
+    ])->name('pacientes.store');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recetas farmacéuticas - RF-13
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/recetas', [
+        RecetaController::class,
+        'index'
+    ])->name('recetas.index');
+
+    Route::post('/recetas', [
+        RecetaController::class,
+        'store'
+    ])->name('recetas.store');
 
     /*
     |--------------------------------------------------------------------------
