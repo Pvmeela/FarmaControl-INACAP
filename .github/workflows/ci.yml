@@ -1,12 +1,15 @@
+
 name: FarmaControl - Integracion Continua
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
+
   workflow_dispatch:
 
 jobs:
@@ -40,6 +43,14 @@ jobs:
           php artisan key:generate
           touch database/database.sqlite
 
+      # Primero preparamos el frontend
+      - name: Instalar dependencias de Vue
+        run: npm ci
+
+      - name: Compilar frontend
+        run: npm run build
+
+      # Despues ejecutamos las pruebas de Laravel
       - name: Ejecutar pruebas de Laravel
         env:
           APP_ENV: testing
@@ -49,9 +60,3 @@ jobs:
           CACHE_STORE: array
           QUEUE_CONNECTION: sync
         run: php artisan test
-
-      - name: Instalar dependencias de Vue
-        run: npm ci
-
-      - name: Compilar frontend
-        run: npm run build
