@@ -32,7 +32,7 @@ const rolUsuario = computed(
 const puedeConsultarDispensaciones = computed(() =>
     [
         'Administrador',
-        'Químico Farmacéutico',
+        'Quimico Farmaceutico',
         'Tecnico en Farmacia',
     ].includes(rolUsuario.value)
 )

@@ -182,7 +182,7 @@ Route::middleware('auth')->group(function () {
         DispensacionController::class,
         'index'
     ])->middleware(
-        'rol:Administrador,Químico Farmacéutico,Tecnico en Farmacia'
+        'rol:Administrador,Quimico Farmaceutico,Tecnico en Farmacia'
     )->name('dispensaciones.index');
 
     // Registrar dispensaciones
