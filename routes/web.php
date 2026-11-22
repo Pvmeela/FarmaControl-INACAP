@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -178,15 +177,21 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
+    // Consultar dispensaciones
     Route::get('/dispensaciones', [
         DispensacionController::class,
         'index'
-    ])->name('dispensaciones.index');
+    ])->middleware(
+        'rol:Administrador,Químico Farmacéutico,Tecnico en Farmacia'
+    )->name('dispensaciones.index');
 
+    // Registrar dispensaciones
     Route::post('/dispensaciones', [
         DispensacionController::class,
         'store'
-    ])->name('dispensaciones.store');
+    ])->middleware(
+        'rol:Administrador,Tecnico en Farmacia'
+    )->name('dispensaciones.store');
 
     /*
     |--------------------------------------------------------------------------
