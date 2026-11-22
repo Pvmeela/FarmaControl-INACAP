@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,7 @@ use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\RecetaController;
+use App\Http\Controllers\DispensacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -169,6 +171,22 @@ Route::middleware('auth')->group(function () {
         RecetaController::class,
         'store'
     ])->name('recetas.store');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dispensaciones asistenciales - RF-16
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/dispensaciones', [
+        DispensacionController::class,
+        'index'
+    ])->name('dispensaciones.index');
+
+    Route::post('/dispensaciones', [
+        DispensacionController::class,
+        'store'
+    ])->name('dispensaciones.store');
 
     /*
     |--------------------------------------------------------------------------

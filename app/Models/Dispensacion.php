@@ -3,33 +3,45 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class DetalleDispensacion extends Model
+class Dispensacion extends Model
 {
-    protected $table = 'detalle_dispensaciones';
+    protected $table = 'dispensaciones';
 
     protected $fillable = [
-        'dispensacion_id',
-        'medicamento_id',
-        'cantidad',
+        'user_id',
+        'paciente_id',
+        'receta_id',
+        'fecha_dispensacion',
+        'observaciones',
     ];
 
     protected function casts(): array
     {
         return [
-            'cantidad' => 'integer',
+            'fecha_dispensacion' => 'datetime',
         ];
     }
 
-    // Dispensación a la que pertenece
-    public function dispensacion()
+    public function usuario(): BelongsTo
     {
-        return $this->belongsTo(Dispensacion::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Medicamento dispensado
-    public function medicamento()
+    public function paciente(): BelongsTo
     {
-        return $this->belongsTo(Medicamento::class);
+        return $this->belongsTo(Paciente::class, 'paciente_id');
+    }
+
+    public function receta(): BelongsTo
+    {
+        return $this->belongsTo(Receta::class, 'receta_id');
+    }
+
+    public function detalles(): HasMany
+    {
+        return $this->hasMany(DetalleDispensacion::class, 'dispensacion_id');
     }
 }
