@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -11,9 +12,21 @@ class DispensacionTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function crearAdministrador(): User
+    {
+        $rol = Rol::firstOrCreate(
+            ['nombre' => 'Administrador'],
+            ['descripcion' => 'Administrador de FarmaControl']
+        );
+
+        return User::factory()->create([
+            'rol_id' => $rol->id,
+        ]);
+    }
+
     public function test_no_permite_dispensar_con_receta_vencida(): void
     {
-        $usuario = User::factory()->create();
+        $usuario = $this->crearAdministrador();
 
         $pacienteId = DB::table('pacientes')->insertGetId([
             'codigo_paciente' => 'PAC-TEST-001',
@@ -90,7 +103,7 @@ class DispensacionTest extends TestCase
 
     public function test_no_permite_cantidad_superior_a_la_prescrita(): void
     {
-        $usuario = User::factory()->create();
+        $usuario = $this->crearAdministrador();
 
         $pacienteId = DB::table('pacientes')->insertGetId([
             'codigo_paciente' => 'PAC-TEST-002',
@@ -143,7 +156,7 @@ class DispensacionTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        // Se solicitan 8 unidades, pero la receta permite 5.
+        // La receta permite 5 unidades, pero se solicitan 8.
         $respuesta = $this->actingAs($usuario)
             ->from('/dispensaciones')
             ->post('/dispensaciones', [
@@ -168,7 +181,7 @@ class DispensacionTest extends TestCase
 
     public function test_no_permite_dispensar_sin_stock_suficiente(): void
     {
-        $usuario = User::factory()->create();
+        $usuario = $this->crearAdministrador();
 
         $pacienteId = DB::table('pacientes')->insertGetId([
             'codigo_paciente' => 'PAC-TEST-003',
@@ -246,7 +259,7 @@ class DispensacionTest extends TestCase
 
     public function test_dispensacion_descuenta_lotes_en_orden_fefo(): void
     {
-        $usuario = User::factory()->create();
+        $usuario = $this->crearAdministrador();
 
         // Crear paciente de prueba.
         $pacienteId = DB::table('pacientes')->insertGetId([
