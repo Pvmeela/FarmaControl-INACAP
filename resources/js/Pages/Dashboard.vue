@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
     alertas: {
@@ -16,6 +16,26 @@ const props = defineProps({
 
 const busqueda = ref('')
 const cerrandoSesion = ref(false)
+
+const page = usePage()
+
+const usuario = computed(() => page.props.auth?.user ?? null)
+
+const nombreUsuario = computed(
+    () => usuario.value?.name ?? 'Usuario'
+)
+
+const rolUsuario = computed(
+    () => usuario.value?.rol ?? 'Sin rol asignado'
+)
+
+const puedeConsultarDispensaciones = computed(() =>
+    [
+        'Administrador',
+        'Químico Farmacéutico',
+        'Tecnico en Farmacia',
+    ].includes(rolUsuario.value)
+)
 
 const iconos = {
     farmacia: [
@@ -192,12 +212,19 @@ const modulos = [
     },
 ]
 
+const modulosVisibles = computed(() =>
+    modulos.filter(modulo =>
+        modulo.nombre !== 'Dispensaciones'
+        || puedeConsultarDispensaciones.value
+    )
+)
+
 const modulosFiltrados = computed(() => {
     const termino = busqueda.value.trim().toLowerCase()
 
-    if (!termino) return modulos
+    if (!termino) return modulosVisibles.value
 
-    return modulos.filter(modulo =>
+    return modulosVisibles.value.filter(modulo =>
         [modulo.nombre, modulo.descripcion, modulo.categoria]
             .join(' ')
             .toLowerCase()
@@ -206,7 +233,13 @@ const modulosFiltrados = computed(() => {
 })
 
 const cantidadModulosActivos = computed(
-    () => modulos.filter(modulo => modulo.disponible).length
+    () => modulosVisibles.value.filter(modulo => modulo.disponible).length
+)
+
+const accesosRapidos = computed(() =>
+    ['Ventas', 'Recetas', 'Dispensaciones']
+        .map(nombre => modulosVisibles.value.find(m => m.nombre === nombre))
+        .filter(Boolean)
 )
 
 function cerrarSesion() {
@@ -333,6 +366,26 @@ function cerrarSesion() {
                     >
                         <span class="h-2 w-2 rounded-full bg-cyan-300"></span>
                         CENTRO DE OPERACIONES
+                    </div>
+
+                    <div class="mb-5 flex flex-wrap gap-3">
+                        <div class="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+                            <p class="text-xs text-blue-100">
+                                Usuario conectado
+                            </p>
+                            <p class="mt-1 text-sm font-bold text-white">
+                                {{ nombreUsuario }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+                            <p class="text-xs text-blue-100">
+                                Rol asignado
+                            </p>
+                            <p class="mt-1 text-sm font-bold text-white">
+                                {{ rolUsuario }}
+                            </p>
+                        </div>
                     </div>
 
                     <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -475,11 +528,7 @@ function cerrarSesion() {
 
                 <div class="grid gap-4 md:grid-cols-3">
                     <Link
-                        v-for="acceso in [
-                            modulos.find(m => m.nombre === 'Ventas'),
-                            modulos.find(m => m.nombre === 'Recetas'),
-                            modulos.find(m => m.nombre === 'Dispensaciones'),
-                        ]"
+                        v-for="acceso in accesosRapidos"
                         :key="acceso.nombre"
                         :href="acceso.enlace"
                         class="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
