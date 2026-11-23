@@ -10,17 +10,13 @@ use App\Models\MovimientoInventario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class VentaController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Consultar ventas
-    |--------------------------------------------------------------------------
-    */
-
+    // Mostrar el listado de ventas.
     public function index()
     {
         $ventas = Venta::with([
@@ -33,7 +29,11 @@ class VentaController extends Controller
 
         $medicamentos = Medicamento::where('activo', true)
             ->orderBy('nombre')
-            ->get(['id', 'nombre', 'codigo']);
+            ->get([
+                'id',
+                'nombre',
+                'codigo',
+            ]);
 
         return Inertia::render('Ventas/Index', [
             'ventas' => $ventas,
@@ -41,26 +41,48 @@ class VentaController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Registrar una venta simulada
-    |--------------------------------------------------------------------------
-    */
+    // Mostrar boleta o factura simulada.
+    public function comprobante(Venta $venta)
+    {
+        $venta->load([
+            'usuario',
+            'detalles.medicamento',
+        ]);
 
+        return Inertia::render('Ventas/Comprobante', [
+            'venta' => $venta,
+        ]);
+    }
+
+    // Registrar una venta con uno o varios medicamentos.
     public function store(Request $request)
     {
         $datos = $request->validate([
-            'medicamento_id' => [
+            'tipo_comprobante' => [
+                'required',
+                Rule::in(['boleta', 'factura']),
+            ],
+
+            'items' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'items.*.medicamento_id' => [
                 'required',
                 'integer',
+                'distinct',
                 'exists:medicamentos,id',
             ],
-            'cantidad' => [
+
+            'items.*.cantidad' => [
                 'required',
                 'integer',
                 'min:1',
             ],
-            'precio_unitario' => [
+
+            'items.*.precio_unitario' => [
                 'required',
                 'numeric',
                 'min:0',
@@ -71,124 +93,157 @@ class VentaController extends Controller
 
         DB::transaction(function () use ($datos, $request) {
 
-            // Bloquear el medicamento para evitar
-            // descuentos simultáneos inconsistentes.
-            $medicamento = Medicamento::whereKey(
-                $datos['medicamento_id']
-            )
-                ->lockForUpdate()
-                ->firstOrFail();
+            // Ordenar medicamentos para mantener un bloqueo consistente.
+            $items = collect($datos['items'])
+                ->sortBy('medicamento_id')
+                ->values();
 
-            if (!$medicamento->activo) {
-                throw ValidationException::withMessages([
-                    'medicamento_id' =>
-                        'El medicamento seleccionado está inactivo.',
-                ]);
-            }
+            $detalles = [];
+            $totalCentavos = 0;
 
-            // Seleccionar lotes utilizables en orden FEFO.
-            // Los lotes que vencen hoy o antes se excluyen.
-            $lotes = Lote::where(
-                'medicamento_id',
-                $medicamento->id
-            )
-                ->whereDate(
-                    'fecha_vencimiento',
-                    '>',
-                    Carbon::today()
+            // Validar medicamentos y calcular subtotales.
+            foreach ($items as $item) {
+
+                $medicamento = Medicamento::whereKey(
+                    $item['medicamento_id']
                 )
-                ->where('cantidad_disponible', '>', 0)
-                ->orderBy('fecha_vencimiento')
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            $stockDisponible = $lotes->sum(
-                'cantidad_disponible'
-            );
+                if (!$medicamento->activo) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Uno de los medicamentos seleccionados está inactivo.',
+                    ]);
+                }
 
-            if ($stockDisponible < $datos['cantidad']) {
-                throw ValidationException::withMessages([
-                    'cantidad' =>
-                        'Stock insuficiente. Disponible: ' .
-                        $stockDisponible . ' unidades.',
-                ]);
+                $precioCentavos = $this->precioEnCentavos(
+                    (string) $item['precio_unitario']
+                );
+
+                $subtotalCentavos =
+                    $precioCentavos * $item['cantidad'];
+
+                $totalCentavos += $subtotalCentavos;
+
+                if ($totalCentavos > 999999999999) {
+                    throw ValidationException::withMessages([
+                        'items' => 'El total de la venta supera el máximo permitido.',
+                    ]);
+                }
+
+                $detalles[] = [
+                    'medicamento' => $medicamento,
+                    'cantidad' => $item['cantidad'],
+                    'precio_unitario' => $this->formatearImporte(
+                        $precioCentavos
+                    ),
+                    'subtotal' => $this->formatearImporte(
+                        $subtotalCentavos
+                    ),
+                ];
             }
 
-            // Calcular importes en centavos para evitar
-            // errores de precisión con números decimales.
-            $precioCentavos = $this->precioEnCentavos(
-                (string) $datos['precio_unitario']
-            );
+            // Comprobar stock utilizable antes de registrar la venta.
+            foreach ($detalles as &$detalle) {
 
-            $totalCentavos = $precioCentavos * $datos['cantidad'];
+                $lotes = Lote::where(
+                    'medicamento_id',
+                    $detalle['medicamento']->id
+                )
+                    ->whereDate(
+                        'fecha_vencimiento',
+                        '>',
+                        Carbon::today()
+                    )
+                    ->where('cantidad_disponible', '>', 0)
+                    ->orderBy('fecha_vencimiento')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
 
-            if ($totalCentavos > 999999999999) {
-                throw ValidationException::withMessages([
-                    'cantidad' =>
-                        'El total de la venta supera el máximo permitido.',
-                ]);
+                $stockDisponible = $lotes->sum(
+                    'cantidad_disponible'
+                );
+
+                if ($stockDisponible < $detalle['cantidad']) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Stock insuficiente para '
+                            . $detalle['medicamento']->nombre
+                            . '. Disponible: '
+                            . $stockDisponible
+                            . ' unidades.',
+                    ]);
+                }
+
+                $detalle['lotes'] = $lotes;
             }
 
-            $precioUnitario = $this->formatearImporte(
-                $precioCentavos
-            );
+            unset($detalle);
 
-            $total = $this->formatearImporte(
-                $totalCentavos
-            );
-
-            // Crear venta simulada.
+            // Crear la venta simulada.
             $venta = Venta::create([
                 'user_id' => $request->user()->id,
                 'fecha_venta' => now(),
-                'total' => $total,
+                'tipo_comprobante' => $datos['tipo_comprobante'],
+                'convenio' => null,
+                'descuento' => 0,
+                'total' => $this->formatearImporte(
+                    $totalCentavos
+                ),
             ]);
 
-            // Registrar el medicamento vendido.
-            DetalleVenta::create([
-                'venta_id' => $venta->id,
-                'medicamento_id' => $medicamento->id,
-                'cantidad' => $datos['cantidad'],
-                'precio_unitario' => $precioUnitario,
-                'subtotal' => $total,
-            ]);
+            // Guardar detalles y descontar inventario.
+            foreach ($detalles as $detalle) {
 
-            $cantidadPendiente = $datos['cantidad'];
-
-            // Descontar unidades siguiendo FEFO.
-            foreach ($lotes as $lote) {
-
-                if ($cantidadPendiente <= 0) {
-                    break;
-                }
-
-                $stockAnterior = $lote->cantidad_disponible;
-
-                $cantidadRetirada = min(
-                    $stockAnterior,
-                    $cantidadPendiente
-                );
-
-                $stockPosterior = (
-                    $stockAnterior - $cantidadRetirada
-                );
-
-                $lote->cantidad_disponible = $stockPosterior;
-                $lote->save();
-
-                // Registrar cada descuento para trazabilidad.
-                MovimientoInventario::create([
-                    'lote_id' => $lote->id,
-                    'user_id' => $request->user()->id,
-                    'tipo' => 'salida',
-                    'cantidad' => $cantidadRetirada,
-                    'stock_anterior' => $stockAnterior,
-                    'stock_posterior' => $stockPosterior,
-                    'motivo' => 'Venta simulada #' . $venta->id,
+                DetalleVenta::create([
+                    'venta_id' => $venta->id,
+                    'medicamento_id' =>
+                        $detalle['medicamento']->id,
+                    'cantidad' => $detalle['cantidad'],
+                    'precio_unitario' =>
+                        $detalle['precio_unitario'],
+                    'subtotal' => $detalle['subtotal'],
                 ]);
 
-                $cantidadPendiente -= $cantidadRetirada;
+                $cantidadPendiente = $detalle['cantidad'];
+
+                // FEFO: descontar los lotes próximos a vencer.
+                foreach ($detalle['lotes'] as $lote) {
+
+                    if ($cantidadPendiente <= 0) {
+                        break;
+                    }
+
+                    $stockAnterior =
+                        $lote->cantidad_disponible;
+
+                    $cantidadRetirada = min(
+                        $stockAnterior,
+                        $cantidadPendiente
+                    );
+
+                    $stockPosterior =
+                        $stockAnterior - $cantidadRetirada;
+
+                    $lote->cantidad_disponible =
+                        $stockPosterior;
+
+                    $lote->save();
+
+                    // Registrar la salida en el historial.
+                    MovimientoInventario::create([
+                        'lote_id' => $lote->id,
+                        'user_id' => $request->user()->id,
+                        'tipo' => 'salida',
+                        'cantidad' => $cantidadRetirada,
+                        'stock_anterior' => $stockAnterior,
+                        'stock_posterior' => $stockPosterior,
+                        'motivo' => 'Venta simulada #'
+                            . $venta->id,
+                    ]);
+
+                    $cantidadPendiente -= $cantidadRetirada;
+                }
             }
         }, 3);
 
@@ -200,12 +255,7 @@ class VentaController extends Controller
             );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Funciones auxiliares para calcular importes
-    |--------------------------------------------------------------------------
-    */
-
+    // Convertir precios a centavos para calcular con precisión.
     private function precioEnCentavos(string $precio): int
     {
         $partes = explode('.', $precio, 2);
@@ -221,6 +271,7 @@ class VentaController extends Controller
         return ($entero * 100) + (int) $decimales;
     }
 
+    // Formatear importes con dos decimales.
     private function formatearImporte(int $centavos): string
     {
         return sprintf(

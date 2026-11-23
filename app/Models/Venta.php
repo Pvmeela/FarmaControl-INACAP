@@ -14,6 +14,9 @@ class Venta extends Model
         'user_id',
         'fecha_venta',
         'total',
+        'tipo_comprobante',
+        'convenio',
+        'descuento',
     ];
 
     protected function casts(): array
@@ -21,6 +24,7 @@ class Venta extends Model
         return [
             'fecha_venta' => 'datetime',
             'total' => 'decimal:2',
+            'descuento' => 'decimal:2',
         ];
     }
 
