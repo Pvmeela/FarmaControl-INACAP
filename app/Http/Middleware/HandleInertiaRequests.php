@@ -28,6 +28,10 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
 
+            // Entorno seleccionado por el usuario.
+            'entorno' => $request->session()->get('entorno'),
+
+            // Información del usuario autenticado.
             'auth' => [
                 'user' => $request->user()
                     ? [
