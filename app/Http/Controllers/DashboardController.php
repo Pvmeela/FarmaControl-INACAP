@@ -9,23 +9,17 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard principal - Alertas de inventario
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Dashboard principal de FarmaControl.
+     * Indicadores y alertas de inventario.
+     */
     public function index()
     {
-        // Fecha actual del sistema.
-        $hoy = Carbon::today()->toDateString();
+        // Fecha actual y límite de alerta de 30 días.
+        $hoy = Carbon::today();
+        $limite = $hoy->copy()->addDays(30);
 
-        // Límite para alertas de vencimiento: 30 días.
-        $limite = Carbon::today()
-            ->addDays(30)
-            ->toDateString();
-
-        // Obtener medicamentos activos con sus lotes.
+        // Medicamentos activos con sus lotes.
         $medicamentos = Medicamento::with('lotes')
             ->where('activo', true)
             ->get();
@@ -36,47 +30,30 @@ class DashboardController extends Controller
         foreach ($medicamentos as $medicamento) {
 
             /*
-            |--------------------------------------------------------------------------
-            | Calcular stock utilizable
-            |--------------------------------------------------------------------------
-            |
-            | Solo se consideran lotes cuya fecha de vencimiento
-            | sea posterior a hoy.
-            |
-            | Los lotes que vencen hoy o antes quedan excluidos.
-            |
-            */
-
+             * Calcular stock utilizable.
+             *
+             * Se incluyen los lotes que vencen hoy
+             * o en una fecha posterior.
+             *
+             * Se excluyen los lotes ya vencidos.
+             */
             $stockUtilizable = $medicamento->lotes
                 ->filter(function ($lote) use ($hoy) {
                     return $lote->fecha_vencimiento
-                        && Carbon::parse($lote->fecha_vencimiento)
-                            ->toDateString() > $hoy;
+                        && Carbon::parse(
+                            $lote->fecha_vencimiento
+                        )->startOfDay()->greaterThanOrEqualTo($hoy);
                 })
                 ->sum('cantidad_disponible');
 
             $stockMinimo = (int) $medicamento->stock_minimo;
 
-            /*
-            |--------------------------------------------------------------------------
-            | Quiebres de stock
-            |--------------------------------------------------------------------------
-            */
-
+            // Medicamentos sin existencias utilizables.
             if ($stockUtilizable <= 0) {
                 $quiebresStock++;
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Stock bajo
-            |--------------------------------------------------------------------------
-            |
-            | Debe existir stock utilizable.
-            | El mínimo debe estar configurado.
-            |
-            */
-
+            // Medicamentos con stock bajo.
             elseif (
                 $stockMinimo > 0 &&
                 $stockUtilizable <= $stockMinimo
@@ -86,52 +63,41 @@ class DashboardController extends Controller
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Lotes próximos a vencer
-        |--------------------------------------------------------------------------
-        |
-        | Vencen después de hoy y dentro de 30 días.
-        | Solo se cuentan lotes con existencias.
-        |
-        */
-
+         * Lotes próximos a vencer.
+         *
+         * Incluye los que vencen hoy o durante
+         * los próximos 30 días.
+         *
+         * Solo se cuentan lotes con existencias.
+         */
         $proximosVencer = Lote::whereDate(
                 'fecha_vencimiento',
-                '>',
-                $hoy
+                '>=',
+                $hoy->toDateString()
             )
             ->whereDate(
                 'fecha_vencimiento',
                 '<=',
-                $limite
+                $limite->toDateString()
             )
             ->where('cantidad_disponible', '>', 0)
             ->count();
 
         /*
-        |--------------------------------------------------------------------------
-        | Lotes vencidos
-        |--------------------------------------------------------------------------
-        |
-        | Incluye lotes que vencen hoy o antes.
-        | Solo se cuentan lotes con existencias físicas.
-        |
-        */
-
+         * Lotes vencidos.
+         *
+         * Solo se consideran fechas anteriores a hoy
+         * y lotes que todavía tienen existencias.
+         */
         $lotesVencidos = Lote::whereDate(
                 'fecha_vencimiento',
-                '<=',
-                $hoy
+                '<',
+                $hoy->toDateString()
             )
             ->where('cantidad_disponible', '>', 0)
             ->count();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Enviar indicadores al dashboard de Vue
-        |--------------------------------------------------------------------------
-        */
-
+        // Enviar alertas al Dashboard de Vue.
         return Inertia::render('Dashboard', [
             'alertas' => [
                 'stock_bajo' => $stockBajo,
