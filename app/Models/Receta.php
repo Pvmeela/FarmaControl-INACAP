@@ -16,6 +16,11 @@ class Receta extends Model
         'profesional_prescriptor',
         'estado',
         'observaciones',
+        'tipo_receta',
+        'formato_receta',
+        'rut_prescriptor',
+        'fecha_retencion',
+        'retenida_por',
     ];
 
     protected function casts(): array
@@ -23,6 +28,7 @@ class Receta extends Model
         return [
             'fecha_emision' => 'date',
             'fecha_vencimiento' => 'date',
+            'fecha_retencion' => 'datetime',
         ];
     }
 
@@ -34,5 +40,13 @@ class Receta extends Model
     public function detalles()
     {
         return $this->hasMany(DetalleReceta::class);
+    }
+
+    public function responsableRetencion()
+    {
+        return $this->belongsTo(
+            User::class,
+            'retenida_por'
+        );
     }
 }

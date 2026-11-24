@@ -18,14 +18,6 @@ class RolesSeeder extends Seeder
                 'descripcion' => 'Gestiona usuarios, roles y configuraciones del sistema.',
             ],
             [
-                'nombre' => 'Docente',
-                'descripcion' => 'Supervisa las actividades académicas y las simulaciones.',
-            ],
-            [
-                'nombre' => 'Estudiante',
-                'descripcion' => 'Realiza actividades de simulación farmacéutica.',
-            ],
-            [
                 'nombre' => 'Quimico Farmaceutico',
                 'descripcion' => 'Supervisa los procesos farmacéuticos y la dispensación.',
             ],

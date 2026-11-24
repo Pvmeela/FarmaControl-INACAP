@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Lote;
 use App\Models\Medicamento;
 use App\Models\MovimientoInventario;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -12,14 +13,44 @@ use Illuminate\Validation\ValidationException;
 class LoteController extends Controller
 {
     /**
-     * Mostrar lotes y medicamentos disponibles.
+     * Mostrar lotes, medicamentos y alertas de vencimiento.
      */
     public function index()
     {
+        $hoy = Carbon::today();
+        $limiteAlerta = $hoy->copy()->addDays(30);
+
         $lotes = Lote::with('medicamento')
             ->orderBy('fecha_vencimiento')
-            ->get();
+            ->get()
+            ->map(function ($lote) use ($hoy, $limiteAlerta) {
 
+                $vencimiento = $lote->fecha_vencimiento;
+
+                // Clasificar el estado de vencimiento.
+                if ($vencimiento->lt($hoy)) {
+                    $estado = 'vencido';
+                } elseif ($vencimiento->lte($limiteAlerta)) {
+                    $estado = 'proximo_vencer';
+                } else {
+                    $estado = 'vigente';
+                }
+
+                // Agregar información para la pantalla.
+                $lote->setAttribute(
+                    'estado_vencimiento',
+                    $estado
+                );
+
+                $lote->setAttribute(
+                    'dias_para_vencer',
+                    (int) $hoy->diffInDays($vencimiento, false)
+                );
+
+                return $lote;
+            });
+
+        // Obtener medicamentos activos.
         $medicamentos = Medicamento::where('activo', true)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'codigo']);

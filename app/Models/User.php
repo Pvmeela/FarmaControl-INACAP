@@ -11,8 +11,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'rol_id'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable([
+    'name',
+    'email',
+    'password',
+    'rol_id',
+    'activo',
+])]
+
+#[Hidden([
+    'password',
+    'remember_token',
+])]
+
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -27,7 +38,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the attributes that should be cast.
+     * Conversión de los atributos del usuario.
      *
      * @return array<string, string>
      */
@@ -36,6 +47,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
     }
 }

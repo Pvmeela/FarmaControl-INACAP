@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,18 +28,9 @@ class MedicamentoController extends Controller
             ->get()
             ->map(function (Medicamento $medicamento) use ($hoy) {
 
-                // Stock físico:
-                // Incluye todas las unidades registradas,
-                // incluso las que están vencidas.
                 $stockFisico = $medicamento->lotes
                     ->sum('cantidad_disponible');
 
-                // Stock utilizable:
-                // Solo incluye lotes cuya fecha de
-                // vencimiento es posterior a hoy.
-                //
-                // Los lotes que vencen hoy o antes
-                // NO se consideran utilizables.
                 $stockUtilizable = $medicamento->lotes
                     ->filter(function ($lote) use ($hoy) {
                         return $lote->fecha_vencimiento
@@ -50,7 +42,6 @@ class MedicamentoController extends Controller
 
                 $stockMinimo = (int) $medicamento->stock_minimo;
 
-                // Determinar el estado del stock.
                 if ($stockUtilizable <= 0) {
                     $estadoStock = 'quiebre';
                 } elseif ($stockMinimo === 0) {
@@ -61,7 +52,6 @@ class MedicamentoController extends Controller
                     $estadoStock = 'suficiente';
                 }
 
-                // Agregar datos calculados para Vue.
                 $medicamento->setAttribute(
                     'stock_fisico',
                     (int) $stockFisico
@@ -77,7 +67,6 @@ class MedicamentoController extends Controller
                     $estadoStock
                 );
 
-                // Evitar enviar todos los lotes al catálogo.
                 $medicamento->unsetRelation('lotes');
 
                 return $medicamento;
@@ -90,54 +79,241 @@ class MedicamentoController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | Registrar medicamento
+    | Validar información del medicamento
     |--------------------------------------------------------------------------
     */
 
-    public function store(Request $request): RedirectResponse
-    {
+    private function validarDatos(
+        Request $request,
+        ?Medicamento $medicamento = null
+    ): array {
+
+        $reglaCodigo = Rule::unique(
+            'medicamentos',
+            'codigo'
+        );
+
+        if ($medicamento) {
+            $reglaCodigo->ignore($medicamento->id);
+        }
+
         $datos = $request->validate([
+
             'nombre' => [
                 'required',
                 'string',
                 'max:150',
             ],
+
             'principio_activo' => [
                 'required',
                 'string',
                 'max:150',
             ],
+
             'concentracion' => [
                 'required',
                 'string',
                 'max:100',
             ],
+
             'forma_farmaceutica' => [
                 'required',
                 'string',
                 'max:100',
             ],
+
             'presentacion' => [
                 'required',
                 'string',
                 'max:150',
             ],
+
             'codigo' => [
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('medicamentos', 'codigo'),
+                $reglaCodigo,
             ],
+
             'stock_minimo' => [
                 'sometimes',
                 'required',
                 'integer',
                 'min:0',
             ],
+
+            'precio_venta' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'decimal:0,2',
+                'max:9999999999.99',
+            ],
+
+            'es_controlado' => [
+                'sometimes',
+                'required',
+                'boolean',
+            ],
+
+            'tipo_control' => [
+                'nullable',
+                Rule::in([
+                    'estupefaciente',
+                    'psicotropico',
+                ]),
+            ],
+
+            'requiere_receta' => [
+                'sometimes',
+                'required',
+                'boolean',
+            ],
+
+            'tipo_receta' => [
+                'nullable',
+                Rule::in([
+                    'simple',
+                    'retenida',
+                    'cheque',
+                ]),
+            ],
+
+        ], [
+
+            'nombre.required' =>
+                'Debes ingresar el nombre del medicamento.',
+
+            'codigo.unique' =>
+                'Ya existe un medicamento con este código.',
+
+            'tipo_control.in' =>
+                'La clasificación seleccionada no es válida.',
+
+            'tipo_receta.in' =>
+                'El tipo de receta seleccionado no es válido.',
+
+            'stock_minimo.min' =>
+                'El stock mínimo no puede ser negativo.',
+
+            'precio_venta.min' =>
+                'El precio no puede ser negativo.',
+
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Conservar datos existentes durante la edición
+        |--------------------------------------------------------------------------
+        */
+
+        $esControlado = (bool) (
+            $datos['es_controlado']
+            ?? $medicamento?->es_controlado
+            ?? false
+        );
+
+        $requiereReceta = (bool) (
+            $datos['requiere_receta']
+            ?? $medicamento?->requiere_receta
+            ?? false
+        );
+
+        $tipoControl = array_key_exists(
+            'tipo_control',
+            $datos
+        )
+            ? $datos['tipo_control']
+            : $medicamento?->tipo_control;
+
+        $tipoReceta = array_key_exists(
+            'tipo_receta',
+            $datos
+        )
+            ? $datos['tipo_receta']
+            : $medicamento?->tipo_receta;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validar medicamentos controlados
+        |--------------------------------------------------------------------------
+        */
+
+        if ($esControlado) {
+
+            if (!$tipoControl) {
+
+                throw ValidationException::withMessages([
+                    'tipo_control' =>
+                        'Debes indicar si corresponde a un estupefaciente o psicotrópico.',
+                ]);
+            }
+
+            $requiereReceta = true;
+
+            if (!in_array(
+                $tipoReceta,
+                ['retenida', 'cheque'],
+                true
+            )) {
+
+                throw ValidationException::withMessages([
+                    'tipo_receta' =>
+                        'Un medicamento controlado requiere una receta retenida o cheque en esta simulación.',
+                ]);
+            }
+
+        } else {
+
+            $tipoControl = null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validar condición de receta
+        |--------------------------------------------------------------------------
+        */
+
+        if ($requiereReceta && !$tipoReceta) {
+
+            throw ValidationException::withMessages([
+                'tipo_receta' =>
+                    'Debes seleccionar el tipo de receta requerida.',
+            ]);
+        }
+
+        if (!$requiereReceta) {
+            $tipoReceta = null;
+        }
+
+        $datos['es_controlado'] = $esControlado;
+
+        $datos['tipo_control'] = $tipoControl;
+
+        $datos['requiere_receta'] = $requiereReceta;
+
+        $datos['tipo_receta'] = $tipoReceta;
+
+        return $datos;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Registrar medicamento
+    |--------------------------------------------------------------------------
+    */
+
+    public function store(
+        Request $request
+    ): RedirectResponse {
+
+        $datos = $this->validarDatos($request);
+
         $datos['activo'] = true;
-        $datos['stock_minimo'] = $datos['stock_minimo'] ?? 0;
+
+        $datos['stock_minimo'] =
+            $datos['stock_minimo'] ?? 0;
 
         Medicamento::create($datos);
 
@@ -159,46 +335,11 @@ class MedicamentoController extends Controller
         Request $request,
         Medicamento $medicamento
     ): RedirectResponse {
-        $datos = $request->validate([
-            'nombre' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-            'principio_activo' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-            'concentracion' => [
-                'required',
-                'string',
-                'max:100',
-            ],
-            'forma_farmaceutica' => [
-                'required',
-                'string',
-                'max:100',
-            ],
-            'presentacion' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-            'codigo' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('medicamentos', 'codigo')
-                    ->ignore($medicamento->id),
-            ],
-            'stock_minimo' => [
-                'sometimes',
-                'required',
-                'integer',
-                'min:0',
-            ],
-        ]);
+
+        $datos = $this->validarDatos(
+            $request,
+            $medicamento
+        );
 
         $medicamento->update($datos);
 
@@ -219,6 +360,7 @@ class MedicamentoController extends Controller
     public function cambiarEstado(
         Medicamento $medicamento
     ): RedirectResponse {
+
         $medicamento->update([
             'activo' => !$medicamento->activo,
         ]);

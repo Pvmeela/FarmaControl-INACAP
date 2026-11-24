@@ -4,8 +4,12 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+
 use App\Http\Middleware\VerificarRol;
+use App\Http\Middleware\VerificarEntorno;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\VerificarUsuarioActivo;
+use App\Http\Middleware\PrevenirCacheSensible;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,14 +19,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-        // Mantener el funcionamiento de Inertia.js
+        // Mantener el funcionamiento de Inertia.js.
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
 
-        // Registrar middleware para verificar roles
+        // Registrar middleware de seguridad.
         $middleware->alias([
             'rol' => VerificarRol::class,
+            'entorno' => VerificarEntorno::class,
+            'usuario.activo' => VerificarUsuarioActivo::class,
+            'cache.sensible' => PrevenirCacheSensible::class,
         ]);
 
     })

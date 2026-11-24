@@ -21,6 +21,7 @@ class DispensacionTest extends TestCase
 
         return User::factory()->create([
             'rol_id' => $rol->id,
+            'activo' => true,
         ]);
     }
 
@@ -80,11 +81,13 @@ class DispensacionTest extends TestCase
         ]);
 
         $respuesta = $this->actingAs($usuario)
+            ->withSession(['entorno' => 'cesfam'])
             ->from('/dispensaciones')
             ->post('/dispensaciones', [
                 'paciente_id' => $pacienteId,
                 'receta_id' => $recetaId,
                 'medicamento_id' => $medicamentoId,
+                'alergias_revisadas' => true,
                 'cantidad' => 1,
             ]);
 
@@ -158,11 +161,13 @@ class DispensacionTest extends TestCase
 
         // La receta permite 5 unidades, pero se solicitan 8.
         $respuesta = $this->actingAs($usuario)
+            ->withSession(['entorno' => 'cesfam'])
             ->from('/dispensaciones')
             ->post('/dispensaciones', [
                 'paciente_id' => $pacienteId,
                 'receta_id' => $recetaId,
                 'medicamento_id' => $medicamentoId,
+                'alergias_revisadas' => true,
                 'cantidad' => 8,
             ]);
 
@@ -236,11 +241,13 @@ class DispensacionTest extends TestCase
 
         // Se solicitan 5 unidades, pero solo hay 3 disponibles.
         $respuesta = $this->actingAs($usuario)
+            ->withSession(['entorno' => 'cesfam'])
             ->from('/dispensaciones')
             ->post('/dispensaciones', [
                 'paciente_id' => $pacienteId,
                 'receta_id' => $recetaId,
                 'medicamento_id' => $medicamentoId,
+                'alergias_revisadas' => true,
                 'cantidad' => 5,
             ]);
 
@@ -330,10 +337,12 @@ class DispensacionTest extends TestCase
 
         // Dispensar 7 unidades.
         $respuesta = $this->actingAs($usuario)
+            ->withSession(['entorno' => 'cesfam'])
             ->post('/dispensaciones', [
                 'paciente_id' => $pacienteId,
                 'receta_id' => $recetaId,
                 'medicamento_id' => $medicamentoId,
+                'alergias_revisadas' => true,
                 'cantidad' => 7,
             ]);
 
